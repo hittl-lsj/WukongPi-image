@@ -1,0 +1,17 @@
+# Buildroot source tree and generated output
+/buildroot-*/
+/output-*/
+/dl/
+
+# Generated images, logs and temporary files
+*.img
+*.log
+*.tmp
+/.marscode/
+
+# Downloaded archives and board photos
+*.tar.xz
+*.tar.xz.sha256sum
+*.tar.xz.sign
+*.jpg
+imagecopy.png
