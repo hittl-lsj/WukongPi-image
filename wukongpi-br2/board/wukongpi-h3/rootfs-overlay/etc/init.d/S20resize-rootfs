@@ -1,0 +1,80 @@
+#!/bin/sh
+
+PATH=/sbin:/bin:/usr/sbin:/usr/bin
+
+DISK=/dev/mmcblk0
+PART=/dev/mmcblk0p1
+STATE_DIR=/var/lib/wukongpi
+DONE="${STATE_DIR}/rootfs-expanded"
+
+grow_rootfs()
+{
+    [ -e "$DONE" ] && return 0
+
+    case " $(cat /proc/cmdline) " in
+        *" root=${PART} "*) ;;
+        *)
+            echo "Root filesystem is not ${PART}; skipping resize"
+            return 0
+            ;;
+    esac
+
+    if [ ! -b "$DISK" ] || [ ! -b "$PART" ]; then
+        echo "Root disk or partition not found"
+        return 1
+    fi
+
+    read -r disk_sectors < /sys/class/block/mmcblk0/size
+    read -r part_start < /sys/class/block/mmcblk0p1/start
+    read -r part_sectors < /sys/class/block/mmcblk0p1/size
+
+    remaining=$((disk_sectors - part_start - part_sectors))
+
+    if [ "$remaining" -gt 4096 ]; then
+        echo "Expanding root partition to fill TF card..."
+
+        if ! printf ',+\n' |
+            sfdisk \
+                --force \
+                --no-reread \
+                --no-tell-kernel \
+                -N 1 \
+                "$DISK"
+        then
+            echo "Failed to expand root partition"
+            return 1
+        fi
+
+        sync
+        echo "Partition expanded; rebooting before filesystem resize"
+        reboot
+        exit 0
+    fi
+
+    echo "Expanding ext4 root filesystem..."
+
+    if ! resize2fs "$PART"; then
+        echo "Failed to resize root filesystem"
+        return 1
+    fi
+
+    mkdir -p "$STATE_DIR"
+    touch "$DONE"
+    sync
+
+    echo "Root filesystem expansion complete"
+}
+
+case "${1:-}" in
+    start)
+        grow_rootfs
+        ;;
+    stop)
+        ;;
+    *)
+        echo "Usage: $0 {start|stop}"
+        exit 1
+        ;;
+esac
+
+exit 0
