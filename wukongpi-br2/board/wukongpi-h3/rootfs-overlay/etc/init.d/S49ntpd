@@ -1,0 +1,79 @@
+#!/bin/sh
+
+PATH=/sbin:/bin:/usr/sbin:/usr/bin
+
+DAEMON=/usr/sbin/ntpd
+PIDFILE=/run/ntpd.pid
+CONFIG=/etc/ntp.conf
+
+start_ntpd()
+{
+    if [ ! -x "$DAEMON" ]; then
+        echo "NTP daemon not installed"
+        return 1
+    fi
+
+    if [ ! -r "$CONFIG" ]; then
+        echo "NTP configuration not found"
+        return 1
+    fi
+
+    if [ -s "$PIDFILE" ] &&
+        kill -0 "$(cat "$PIDFILE")" 2>/dev/null
+    then
+        echo "NTP client already running"
+        return 0
+    fi
+
+    rm -f "$PIDFILE"
+
+    printf "Starting NTP client: "
+
+    if start-stop-daemon \
+        -S \
+        -q \
+        -p "$PIDFILE" \
+        -x "$DAEMON"
+    then
+        echo "OK"
+        return 0
+    fi
+
+    echo "FAIL"
+    return 1
+}
+
+stop_ntpd()
+{
+    printf "Stopping NTP client: "
+
+    if [ ! -s "$PIDFILE" ]; then
+        echo "not running"
+        return 0
+    fi
+
+    if start-stop-daemon -K -q -p "$PIDFILE"; then
+        echo "OK"
+        return 0
+    fi
+
+    echo "FAIL"
+    return 1
+}
+
+case "${1:-}" in
+    start)
+        start_ntpd
+        ;;
+    stop)
+        stop_ntpd
+        ;;
+    restart)
+        stop_ntpd
+        start_ntpd
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart}"
+        exit 1
+        ;;
+esac

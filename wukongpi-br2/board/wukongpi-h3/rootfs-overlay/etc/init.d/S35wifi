@@ -1,0 +1,89 @@
+#!/bin/sh
+
+PATH=/sbin:/bin:/usr/sbin:/usr/bin
+
+IFACE=wlan0
+CONF=/etc/wpa_supplicant.conf
+CTRL_DIR=/run/wpa_supplicant
+PIDFILE=/run/wpa_supplicant.${IFACE}.pid
+
+start_wifi()
+{
+    if [ ! -e "/sys/class/net/${IFACE}" ]; then
+        echo "Wi-Fi interface ${IFACE} not found; skipping"
+        return 0
+    fi
+
+    if [ ! -r "$CONF" ] ||
+        ! grep -q '^[[:space:]]*ssid=' "$CONF"
+    then
+        echo "Wi-Fi is not configured; skipping"
+        return 0
+    fi
+
+    ip link set "$IFACE" up || return 1
+
+    # /run is a tmpfs recreated on every boot, so the control socket
+    # directory must be created before wpa_supplicant starts.
+    mkdir -p "$CTRL_DIR" || return 1
+
+    if ! wpa_cli -i "$IFACE" ping 2>/dev/null |
+        grep -q PONG
+    then
+        rm -f "$PIDFILE"
+
+        wpa_supplicant \
+            -B \
+            -D nl80211 \
+            -i "$IFACE" \
+            -c "$CONF" \
+            -P "$PIDFILE" ||
+            return 1
+    fi
+
+    tries=20
+    while [ "$tries" -gt 0 ]; do
+        state="$(
+            wpa_cli -i "$IFACE" status 2>/dev/null |
+            sed -n 's/^wpa_state=//p'
+        )"
+
+        if [ "$state" = "COMPLETED" ]; then
+            echo "Wi-Fi associated on ${IFACE}"
+            return 0
+        fi
+
+        sleep 1
+        tries=$((tries - 1))
+    done
+
+    echo "Wi-Fi association timed out; state=${state:-UNKNOWN}"
+    return 1
+}
+
+stop_wifi()
+{
+    if [ -s "$PIDFILE" ]; then
+        kill "$(cat "$PIDFILE")" 2>/dev/null || true
+        rm -f "$PIDFILE"
+    fi
+
+    ip link set "$IFACE" down 2>/dev/null || true
+}
+
+case "${1:-}" in
+    start)
+        start_wifi
+        ;;
+    stop)
+        stop_wifi
+        ;;
+    restart)
+        stop_wifi
+        start_wifi
+        ;;
+    *)
+        echo "Usage: $0 {start|stop|restart}"
+        exit 1
+        ;;
+esac

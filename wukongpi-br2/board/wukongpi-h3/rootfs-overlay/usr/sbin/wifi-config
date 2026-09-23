@@ -1,0 +1,57 @@
+#!/bin/sh
+
+PATH=/sbin:/bin:/usr/sbin:/usr/bin
+CONF=/etc/wpa_supplicant.conf
+NETWORK_TMP=
+CONFIG_TMP=
+
+cleanup()
+{
+    [ -n "${NETWORK_TMP:-}" ] && rm -f "$NETWORK_TMP"
+    [ -n "${CONFIG_TMP:-}" ] && rm -f "$CONFIG_TMP"
+}
+
+trap cleanup 0 1 2 15
+
+if [ "$#" -lt 1 ] || [ "$#" -gt 2 ]; then
+    echo "Usage: wifi-config <ssid> [country]"
+    exit 1
+fi
+
+SSID=$1
+COUNTRY=${2:-CN}
+
+case "$COUNTRY" in
+    [A-Z][A-Z]) ;;
+    *)
+        echo "Country must be a two-letter uppercase code"
+        exit 1
+        ;;
+esac
+
+umask 077
+
+NETWORK_TMP="$(mktemp /tmp/wifi-network.XXXXXX)" || exit 1
+CONFIG_TMP="$(mktemp /etc/.wpa_supplicant.conf.XXXXXX)" || exit 1
+
+echo "Enter the WPA/WPA2 password for: $SSID"
+
+if ! wpa_passphrase "$SSID" > "$NETWORK_TMP"; then
+    echo "Failed to generate Wi-Fi configuration"
+    exit 1
+fi
+
+{
+    echo "ctrl_interface=/var/run/wpa_supplicant"
+    echo "update_config=0"
+    echo "country=$COUNTRY"
+    sed '/^[[:space:]]*#psk=/d' "$NETWORK_TMP"
+} > "$CONFIG_TMP" || exit 1
+
+chmod 600 "$CONFIG_TMP"
+mv "$CONFIG_TMP" "$CONF"
+CONFIG_TMP=
+sync
+
+echo "Wi-Fi configuration saved"
+echo "Reboot to connect automatically"
