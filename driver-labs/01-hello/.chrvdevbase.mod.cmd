@@ -1,0 +1,1 @@
+savedcmd_/home/hitle/桌面/H3/driver-labs/01-hello/chrvdevbase.mod := printf '%s\n'   chrvdevbase.o | awk '!x[$$0]++ { print("/home/hitle/桌面/H3/driver-labs/01-hello/"$$0) }' > /home/hitle/桌面/H3/driver-labs/01-hello/chrvdevbase.mod

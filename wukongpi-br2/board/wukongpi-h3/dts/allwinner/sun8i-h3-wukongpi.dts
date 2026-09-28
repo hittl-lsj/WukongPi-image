@@ -29,7 +29,8 @@
 		};
 
 		status-led {
-			label = "wukongpi:red:status";
+    		status = "disabled";
+    		abel = "wukongpi:red:status";
 			gpios = <&pio 0 17 GPIO_ACTIVE_HIGH>;
 			linux,default-trigger = "heartbeat";
 		};
