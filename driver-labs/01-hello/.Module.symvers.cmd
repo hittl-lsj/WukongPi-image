@@ -1,1 +1,0 @@
-savedcmd_/home/hitle/桌面/H3/driver-labs/01-hello/Module.symvers :=  scripts/mod/modpost -M        -o /home/hitle/桌面/H3/driver-labs/01-hello/Module.symvers -T /home/hitle/桌面/H3/driver-labs/01-hello/modules.order -i Module.symvers -e 
