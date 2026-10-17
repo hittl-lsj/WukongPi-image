@@ -50,6 +50,20 @@ make O=../output-wukongpi \
   -j"$(nproc)"
 ```
 
+## 编译设备树和构建镜像
+
+cd /home/hitle/桌面/H3/buildroot-2026.02.3
+
+make O=../output-wukongpi \
+    BR2_EXTERNAL=../wukongpi-br2 \
+    linux-rebuild
+
+
+
+make O=../output-wukongpi \
+    BR2_EXTERNAL=../wukongpi-br2
+
+
 生成的镜像位于：
 
 ```text

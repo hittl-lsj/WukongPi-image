@@ -21,7 +21,8 @@
 
 	leds {
 		compatible = "gpio-leds";
-
+		pinctrl-names = "default";
+		pinctrl-0 = <&red_led_pins>;
 		power-led {
 			label = "wukongpi:green:power";
 			gpios = <&r_pio 0 10 GPIO_ACTIVE_HIGH>;
@@ -29,13 +30,24 @@
 		};
 
 		status-led {
-    		status = "disabled";
-    		abel = "wukongpi:red:status";
+			status = "disabled";
+			label = "wukongpi:red:status";
 			gpios = <&pio 0 17 GPIO_ACTIVE_HIGH>;
-			linux,default-trigger = "heartbeat";
+			default-state = "off";
 		};
 	};
+	key{
+		compatible = "wukongpi,key";
+		pinctrl-names = "default";
+		pinctrl-0 = <&key_pa6_pins>;
+		gpios = <&pio 0 6 GPIO_ACTIVE_LOW>;
 
+		interrupt-parent = <&pio>;
+		interrupts = < 0 6 IRQ_TYPE_EDGE_BOTH>;
+
+
+		status = "okay";
+	};
 	reg_vdd_cpux: vdd-cpux-regulator {
 		compatible = "regulator-gpio";
 		regulator-name = "vdd-cpux";
@@ -128,5 +140,18 @@
 		compatible = "xradio,xr819";
 		interrupt-parent = <&pio>;
 		interrupts = <6 10 IRQ_TYPE_EDGE_RISING>;
+	};
+};
+&pio {
+    red_led_pins: red-led-pins {
+        pins = "PA17";
+        function = "gpio_out";
+        bias-disable;
+        drive-strength = <20>;
+    };
+	key_pa6_pins: key_pa6_pins {
+		pins = "PA6";
+		function = "gpio_in";
+		bias-pull-up;
 	};
 };

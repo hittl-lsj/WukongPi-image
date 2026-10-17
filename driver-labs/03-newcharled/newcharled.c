@@ -66,12 +66,17 @@ static int led_open(struct inode *inode, struct file *file)
 {
     pr_info("wukong_led: open\n");
     h3_led_set(LED_ON);//打开led
+    file->private_data = &newcharled;//将led状态指针赋值给file.private_data
+
     return 0;
 }
 
 static int led_release(struct inode *inode, struct file *file)
 {
     pr_info("wukong_led: release\n");
+    struct newcharled_dev *led_dev = (struct newcharled_dev *)file->private_data;//获取led状态指针
+    h3_led_set(LED_OFF);//关闭led
+    led_dev.le
 
     return 0;
 }
