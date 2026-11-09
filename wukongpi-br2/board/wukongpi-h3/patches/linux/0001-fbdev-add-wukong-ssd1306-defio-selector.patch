@@ -1,0 +1,35 @@
+From 3f4bbcbfe1ce6f8fb2c195e06e86d80759e12175 Mon Sep 17 00:00:00 2001
+From: WuKong Pi Buildroot <wukongpi@example.invalid>
+Date: Sat, 7 Nov 2026 12:00:00 +0800
+Subject: [PATCH] fbdev: add WuKong SSD1306 deferred-I/O selector
+
+The SSD1306 teaching driver is built out of tree, so it cannot select the
+hidden FB_DEFERRED_IO option through its own Kconfig entry. Add a visible
+board-development option which selects the required fbdev core support.
+
+Signed-off-by: WuKong Pi Buildroot <wukongpi@example.invalid>
+---
+ drivers/video/fbdev/Kconfig | 9 +++++++++
+ 1 file changed, 9 insertions(+)
+
+diff --git a/drivers/video/fbdev/Kconfig b/drivers/video/fbdev/Kconfig
+index 123456789abc..abcdef123456 100644
+--- a/drivers/video/fbdev/Kconfig
++++ b/drivers/video/fbdev/Kconfig
+@@ -46,5 +46,14 @@ menuconfig FB
+ 	  device-aware may cause unexpected results. If unsure, say N.
+ 
++config FB_WUKONG_SSD1306_HELPERS
++	bool "WuKong Pi SSD1306 external driver deferred-I/O support"
++	depends on FB && FB_DEVICE && I2C
++	select FB_DEFERRED_IO
++	help
++	  Enable the framebuffer deferred-I/O core needed by the external
++	  WuKong Pi SSD1306 teaching driver. The display driver itself is
++	  built outside the kernel tree in driver-labs/16-fb_oled.
++
+ config FB_HECUBA
+ 	tristate
+ 	depends on FB
+-- 
+2.43.0

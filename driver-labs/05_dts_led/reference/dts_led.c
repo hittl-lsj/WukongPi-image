@@ -60,7 +60,7 @@ static int led_open(struct inode *inode, struct file *file)
 static int led_release(struct inode *inode, struct file *file)
 {
 	struct dts_led_dev *led = file->private_data;
-	atomic_inc(&led->users);
+	atomic_inc(&led->users);// 增加打开文件描述符数量
 	/* 关闭文件不改变 LED；灯保持最后一次写入的状态。 */
 	return 0;
 }

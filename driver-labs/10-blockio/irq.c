@@ -31,6 +31,7 @@
 #include <linux/timer.h>
 #include <linux/list.h>
 #include <linux/jiffies.h>
+#include <linux/pinctrl/consumer.h>
 #include <linux/wait.h>
 
 
@@ -67,41 +68,29 @@ static int key_open(struct inode *inode, struct file *file)
 	file->private_data = &dts_key;
 	return 0;
 }
-
-
-
 static ssize_t key_read(struct file *file, char __user *buf,
 			size_t count, loff_t *ppos)
 {
-	int ret;
-	unsigned int key_value;
-	unsigned int key_state;
-		
-	unsigned int key_release;
-		
 	struct dts_key_dev *dev = file->private_data;
+	int state;
+	int ret;
 
-	wait_event_interruptible(dev->key_wait_qu, atomic_read(&dev->key_release) == 1);
+	if (count < sizeof(int))
+		return -EINVAL;
 
-	key_state = atomic_read(&dev->key_state);
-	key_value = atomic_read(&dev->key_value);
-	key_release = atomic_read(&dev->key_release);
-	if(key_release == 1){
-		if(key_value == 0){
-			ret = copy_to_user(buf, &key_value, sizeof(key_value));
-		}
-		else{
-			goto data_error;
-		}
-	}
-	
+	/* ★ 阻塞等待：只等按键按下 */
+	ret = wait_event_interruptible(dev->key_wait_qu,
+				       atomic_read(&dev->key_state) == 1);
 	if (ret)
 		return ret;
 
-	return 0;
+	state = atomic_read(&dev->key_state);
+	atomic_set(&dev->key_state, KEY_OFF);
 
-	data_error:
-		return -EINVAL;
+	if (copy_to_user(buf, &state, sizeof(int)))
+		return -EFAULT;
+
+	return sizeof(int);   /* ★ 必须返回读到的字节数，不能返回 0！ */
 }
 
 static ssize_t key_write(struct file *file, const char __user *buf,
@@ -119,23 +108,44 @@ static irqreturn_t key_isr(int irq, void *dev_id)
     return IRQ_HANDLED;
 }
 
-static void timer_callback(struct timer_list *timer)
-{
+// static void timer_callback(struct timer_list *timer)
+// {
 
-	if (gpiod_get_value(dts_key.gpio) == 1) {
-		atomic_set(&dts_key.key_state, KEY_ON);
-		printk("key is pressed\n");
-		atomic_set(&dts_key.key_value, 1);
-		atomic_set(&dts_key.key_release, 0);
+// 	if (gpiod_get_value(dts_key.gpio) == 1) {
+// 		atomic_set(&dts_key.key_state, KEY_ON);
+// 		printk("key is pressed\n");
+// 		atomic_set(&dts_key.key_value, 1);
+// 		atomic_set(&dts_key.key_release, 0);
 		
+// 	} else {
+// 		atomic_set(&dts_key.key_state, KEY_OFF);
+// 		printk("key is released\n");
+// 		atomic_set(&dts_key.key_value, 0);
+// 		atomic_set(&dts_key.key_release, 1);
+// 		wake_up_interruptible(&dts_key.key_wait_qu);
+// 	}
+// 	printk("\n");
+// }
+static void timer_callback(struct timer_list *t)
+{
+	struct dts_key_dev *dev = from_timer(dev, t, timer);
+	int state = gpiod_get_value(dev->gpio);   /* ACTIVE_LOW: 1=按下，0=松开 */
+
+	if (state == 1) {
+		/* 按下 */
+		if (atomic_read(&dev->key_state) != 1) {
+			atomic_set(&dev->key_state, 1);
+			pr_info("key is pressed\n");
+			wake_up_interruptible(&dev->key_wait_qu);  /* ★ 只有按下才唤醒 */
+		}
 	} else {
-		atomic_set(&dts_key.key_state, KEY_OFF);
-		printk("key is released\n");
-		atomic_set(&dts_key.key_value, 0);
-		atomic_set(&dts_key.key_release, 1);
-		wake_up_interruptible(&dts_key.key_wait_qu);
+		/* 松开 */
+		if (atomic_read(&dev->key_state) != 0) {
+			atomic_set(&dev->key_state, 0);
+			pr_info("key is released\n");
+			/* ★ 松开时什么都不用做，不唤醒，避免空转 */
+		}
 	}
-	printk("\n");
 }
 static const struct file_operations key_fops = {
 	.owner = THIS_MODULE,
@@ -152,6 +162,8 @@ static int __init dts_key_init(void)
 
 	atomic_set(&dts_key.users, 1);
 	atomic_set(&dts_key.key_state, KEY_OFF);
+	init_waitqueue_head(&dts_key.key_wait_qu);
+	
 	mutex_init(&dts_key.lock);
 
 	/* 本课显式读取自定义 /key 节点，不要求节点 disabled。 */
@@ -175,6 +187,10 @@ static int __init dts_key_init(void)
 		pr_err("dts_key: cannot request GPIO: %d\n", ret);
 		return ret;
 	}
+	// 在 dts_key_init 里面：
+struct pinctrl *p;
+struct pinctrl_state *state;
+
 
 	/* 动态分配设备号，避免写死主设备号造成冲突。 */
 	ret = alloc_chrdev_region(&dts_key.devt, 0, 1, KEY_NAME);
@@ -198,6 +214,16 @@ static int __init dts_key_init(void)
 		ret = PTR_ERR(dts_key.device);
 		goto err_destroy_class;
 	}
+// 1. 告诉内核去解析你的 pinctrl
+p = pinctrl_get(dts_key.device); 
+if (!IS_ERR(p)) {
+    // 2. 找到名叫 "default" 的状态（就是 DTS 里的 pinctrl-names）
+    state = pinctrl_lookup_state(p, "default");
+    if (!IS_ERR(state)) {
+        // 3. 应用它（这时候内部上拉才会真正生效！）
+        pinctrl_select_state(p, state); 
+    }
+}
 
 	/* 最后发布 cdev；此后 open/read/write 才能进入本驱动。 */
 	ret = cdev_add(&dts_key.cdev, dts_key.devt, 1);
@@ -213,7 +239,7 @@ static int __init dts_key_init(void)
 		ret = dts_key.irq_num;
 		goto err_destroy_device;
 	}
-
+	timer_setup(&dts_key.timer, timer_callback, 0);
 	ret = request_irq(dts_key.irq_num, key_isr, IRQF_TRIGGER_RISING | IRQF_TRIGGER_FALLING,
 			      KEY_NAME, &dts_key);
 	if (ret) {
@@ -223,10 +249,9 @@ static int __init dts_key_init(void)
 	}
 
 	/* 初始化定时器，指定到期后执行的函数 */
-	timer_setup(&dts_key.timer, timer_callback, 0);
 
-	init_waitqueue_head(&dts_key.key_wait_qu);
-	
+
+
 
 	
 	return 0;
@@ -246,13 +271,14 @@ err_put_gpio:
 
 static void __exit dts_key_exit(void)
 {
-	/* owner=THIS_MODULE 使正常卸载必须等应用关闭设备文件。 */
+	timer_shutdown_sync(&dts_key.timer); 
+	free_irq(dts_key.irq_num, &dts_key);
+
 	cdev_del(&dts_key.cdev);
 	device_destroy(dts_key.class, dts_key.devt);
 	class_destroy(dts_key.class);
 	unregister_chrdev_region(dts_key.devt, 1);
 	gpiod_put(dts_key.gpio);
-	free_irq(dts_key.irq_num, &dts_key);
 	pr_info("dts_key: unloaded\n");
 }
 

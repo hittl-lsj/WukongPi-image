@@ -21,10 +21,12 @@ int main(int argc, char *argv[])
 	while (1) {
 		ret = read(fd, &value, sizeof(value));
 		if(value == 0){
+			printf("1\n");
 			printf("key released\n");
 		}
 		else{
 			printf("key pressed\n");
+			printf("1\n");
 		}
 	}
 	close(fd);
