@@ -103,26 +103,26 @@ static void draw_frame(uint8_t *fb)
 
 	/* 外框：确认四个边界坐标都能正确显示。 */
 	for (x = 0; x < OLED_WIDTH; x++) {
-		set_pixel(fb, x, 0, 1);
-		set_pixel(fb, x, OLED_HEIGHT - 1, 1);
+		set_pixel(fb, x, 0, 1);// 上边界
+		set_pixel(fb, x, OLED_HEIGHT - 1, 1);// 下边界
 	}
 	for (y = 0; y < OLED_HEIGHT; y++) {
-		set_pixel(fb, 0, y, 1);
-		set_pixel(fb, OLED_WIDTH - 1, y, 1);
+		set_pixel(fb, 0, y, 1);// 左边界
+		set_pixel(fb, OLED_WIDTH - 1, y, 1);// 右边界
 	}
 
 	/* 两条对角线：确认 x/y 坐标方向。 */
 	for (x = 0; x < OLED_WIDTH; x++) {
-		y = x * (OLED_HEIGHT - 1) / (OLED_WIDTH - 1);
-		set_pixel(fb, x, y, 1);
-		set_pixel(fb, x, OLED_HEIGHT - 1 - y, 1);
+		y = x * (OLED_HEIGHT - 1) / (OLED_WIDTH - 1);// 计算对角线上的像素坐标
+		set_pixel(fb, x, y, 1);// 绘制对角线上的像素
+		set_pixel(fb, x, OLED_HEIGHT - 1 - y, 1);// 绘制对角线上的像素
 	}
 
 	/* 中央棋盘格：确认字节内的位顺序和行间步长。 */
 	for (y = 16; y < 48; y++) {
 		for (x = 16; x < 112; x++) {
-			if (((x / 8) + (y / 8)) % 2)
-				set_pixel(fb, x, y, 1);
+			if (((x / 8) + (y / 8)) % 2 == 0)// 检查是否为偶数行或偶数列
+				set_pixel(fb, x, y, 1);// 绘制像素
 		}
 	}
 
@@ -139,8 +139,8 @@ static void draw_frame(uint8_t *fb)
  */
 int main(int argc, char **argv)
 {
-	struct fb_fix_screeninfo fix;
-	struct fb_var_screeninfo var;
+	struct fb_fix_screeninfo fix;// 固定屏幕信息
+	struct fb_var_screeninfo var;// 变量屏幕信息
 	uint8_t *framebuffer;
 	const char *device = "/dev/fb0";
 	int fd;
@@ -158,8 +158,8 @@ int main(int argc, char **argv)
 		return 1;
 	}
 
-	if (ioctl(fd, FBIOGET_FSCREENINFO, &fix) < 0 ||
-	    ioctl(fd, FBIOGET_VSCREENINFO, &var) < 0) {
+	if (ioctl(fd, FBIOGET_FSCREENINFO, &fix) < 0 ||// 获取固定屏幕信息
+	    ioctl(fd, FBIOGET_VSCREENINFO, &var) < 0)// 获取变量屏幕信息
 		perror("query framebuffer");
 		close(fd);
 		return 1;
@@ -170,11 +170,11 @@ int main(int argc, char **argv)
 	       fix.line_length, fix.smem_len);
 
 	/* 拒绝写入其他格式的 framebuffer，避免静默显示错误。 */
-	if (strncmp(fix.id, "wukong-ssd1306", sizeof(fix.id)) != 0 ||
-	    fix.type != FB_TYPE_PACKED_PIXELS ||
-	    fix.visual != FB_VISUAL_MONO10 ||
-	    var.xres != OLED_WIDTH || var.yres != OLED_HEIGHT ||
-	    var.bits_per_pixel != 1 || fix.line_length != OLED_STRIDE ||
+	if (strncmp(fix.id, "wukong-ssd1306", sizeof(fix.id)) != 0 ||// 检查固定屏幕信息是否匹配
+	    fix.type != FB_TYPE_PACKED_PIXELS ||// 检查固定屏幕信息是否匹配
+	    fix.visual != FB_VISUAL_MONO10 ||// 检查固定屏幕信息是否匹配
+	    var.xres != OLED_WIDTH || var.yres != OLED_HEIGHT ||// 检查变量屏幕信息是否匹配
+	    var.bits_per_pixel != 1 || fix.line_length != OLED_STRIDE ||// 检查固定屏幕信息是否匹配
 	    fix.smem_len != OLED_FB_SIZE) {
 		fprintf(stderr, "unexpected framebuffer format\n");
 		close(fd);

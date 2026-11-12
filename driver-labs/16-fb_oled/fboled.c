@@ -192,17 +192,17 @@ static int ssd1306_flush(struct i2c_client *client, const u8 *fb)
 static void ssd1306_deferred_io(struct fb_info *info,
 				struct list_head *pagereflist)
 {
-	struct ssd1306fb *par = info->par;
+	struct ssd1306fb *par = info->par;// 获取驱动私有数据指针
 	int ret;
 
-	(void)pagereflist;
+	(void)pagereflist;// 忽略未使用的参数
 
 	mutex_lock(&par->io_lock);
 	ret = ssd1306_flush(par->client, info->screen_buffer);
 	mutex_unlock(&par->io_lock);
 
 	if (ret)
-		dev_err_ratelimited(&par->client->dev,
+		dev_err_ratelimited(&par->client->dev,// 打印错误日志
 				    "deferred framebuffer flush failed: %d\n",
 				    ret);
 }
@@ -213,7 +213,7 @@ static void ssd1306_schedule_refresh(struct fb_info *info)
 	 * 如果已有刷新任务等待执行，schedule_delayed_work() 不会再创建
 	 * 第二个任务，因此连续的小写入会合并成一次 I2C 整屏刷新。
 	 */
-	schedule_delayed_work(&info->deferred_work, info->fbdefio->delay);
+	schedule_delayed_work(&info->deferred_work, info->fbdefio->delay);// 刷新显示缓冲区
 }
 
 static ssize_t ssd1306_fb_write(struct fb_info *info,
@@ -224,11 +224,11 @@ static ssize_t ssd1306_fb_write(struct fb_info *info,
 	ssize_t written;
 
 	mutex_lock(&par->io_lock);
-	written = simple_write_to_buffer(info->screen_buffer,
+	written = simple_write_to_buffer(info->screen_buffer,// 写入 framebuffer 缓冲区
 					 info->screen_size,
 					 ppos, buf, count);
-	if (written > 0)
-		ssd1306_schedule_refresh(info);
+	if (written > 0)// 写入成功
+		ssd1306_schedule_refresh(info);// 刷新显示缓冲区
 
 	mutex_unlock(&par->io_lock);
 	return written;
@@ -266,8 +266,8 @@ static int ssd1306_probe(struct i2c_client *client)
 	par = info->par;// 获取驱动私有数据指针
 	par->client = client;// 初始化 I2C 客户端指针
 	mutex_init(&par->io_lock);// 初始化互斥锁
-	par->defio.delay = msecs_to_jiffies(SSD1306_REFRESH_DELAY_MS);
-	par->defio.deferred_io = ssd1306_deferred_io;
+	par->defio.delay = msecs_to_jiffies(SSD1306_REFRESH_DELAY_MS);// 设置刷新延迟
+	par->defio.deferred_io = ssd1306_deferred_io;// 设置延迟 I/O 函数指针
 
 	/*
 	 * 把 framebuffer 的操作函数和显示参数交给 fbdev 核心。
@@ -288,7 +288,7 @@ static int ssd1306_probe(struct i2c_client *client)
 	 * deferred-I/O 需要取得缓冲区背后的 struct page。vzalloc()
 	 * 分配的页面可以通过 vmalloc_to_page() 找到并映射到用户空间。
 	 */
-	info->screen_buffer = vzalloc(SSD1306_FB_SIZE);
+	info->screen_buffer = vzalloc(SSD1306_FB_SIZE);// 分配显示缓冲区内存
 	if (!info->screen_buffer)
 	{
 		ret = -ENOMEM;
@@ -366,30 +366,30 @@ err_release_fb:
 }
 static void ssd1306_remove(struct i2c_client *client)
 {
-	struct fb_info *info = i2c_get_clientdata(client);
-	struct ssd1306fb *par;
-	u8 display_off = 0xAE;
+	struct fb_info *info = i2c_get_clientdata(client);// 获取客户端数据指针
+	struct ssd1306fb *par;// 获取驱动私有数据指针
+	u8 display_off = 0xAE;// 显示关闭命令
 
 	if (!info)
 		return;
 
-	par = info->par;
+	par = info->par;// 获取驱动私有数据指针
 
 	/*
 	 * 首先注销设备，阻止用户空间继续通过 /dev/fb0 写入。
 	 */
 	unregister_framebuffer(info);
-	i2c_set_clientdata(client, NULL);
+	i2c_set_clientdata(client, NULL);// 设置客户端数据指针为 NULL
 
 	/* 先执行并取消所有待处理刷新，避免释放缓冲区后工作队列再访问它。 */
-	fb_deferred_io_cleanup(info);
+	fb_deferred_io_cleanup(info);// 清理延迟 I/O 状态标志
 
 	mutex_lock(&par->io_lock);
-	ssd1306_write(client, 0x00, &display_off, 1);
+	ssd1306_write(client, 0x00, &display_off, 1);// 发送显示关闭命令
 	mutex_unlock(&par->io_lock);
 
-	vfree(info->screen_buffer);
-	framebuffer_release(info);
+	vfree(info->screen_buffer);// 释放显示缓冲区内存
+	framebuffer_release(info);// 释放 framebuffer
 
 	dev_info(&client->dev, "framebuffer removed\n");
 }
