@@ -1,9 +1,10 @@
 {
-    "C_Cpp.intelliSenseEngine": "Tag Parser",
+
+    "C_Cpp.intelliSenseEngine": "disabled",
     "C_Cpp.files.exclude": {
         "**/.vscode": true,
         "**/.vs": true,
-        "**/output-wukongpi/**": true,
+	"**/output-wukongpi/**": true,
         "**/buildroot-2026.02.3/**": true
     },
     "files.watcherExclude": {

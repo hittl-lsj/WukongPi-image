@@ -1,0 +1,23 @@
+{
+    "C_Cpp.intelliSenseEngine": "disabled",
+    "C_Cpp.maxConcurrentThreads": 1,
+
+    "C_Cpp.default.includePath": [
+        "${workspaceFolder}",
+        "/home/hitle/桌面/H3/output-wukongpi/build/linux-6.12.3/include",
+        "/home/hitle/桌面/H3/output-wukongpi/build/linux-6.12.3/arch/arm/include",
+        "/home/hitle/桌面/H3/output-wukongpi/build/linux-6.12.3/arch/arm/include/generated",
+        "/home/hitle/桌面/H3/output-wukongpi/build/linux-6.12.3/include/uapi",
+        "/home/hitle/桌面/H3/output-wukongpi/build/linux-6.12.3/arch/arm/include/uapi",
+        "/home/hitle/桌面/H3/output-wukongpi/build/linux-6.12.3/include/generated/uapi",
+        "/home/hitle/桌面/H3/output-wukongpi/build/linux-6.12.3/arch/arm/include/generated/uapi"
+    ],
+
+    "C_Cpp.default.browse.path": [
+        "${workspaceFolder}/*",
+        "/home/hitle/桌面/H3/output-wukongpi/build/linux-6.12.3/include/linux/*",
+        "/home/hitle/桌面/H3/output-wukongpi/build/linux-6.12.3/arch/arm/include/asm/*"
+    ],
+
+    "C_Cpp.default.browse.limitSymbolsToIncludedHeaders": true
+}

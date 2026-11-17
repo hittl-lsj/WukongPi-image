@@ -47,7 +47,7 @@ struct dts_key_dev {
 	struct class *class;
 	struct device *device;
 	struct gpio_desc *gpio;
-	struct mutex lock;
+	struct mutex lock;// 互斥锁
 	atomic_t key_state;// 记录按键状态
 	atomic_t users; /* 1=可以打开，0=已经打开；本实验只允许一个使用者。 */
 	atomic_t key_value;// 记录按键状态

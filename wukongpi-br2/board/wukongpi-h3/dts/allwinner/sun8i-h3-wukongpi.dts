@@ -104,6 +104,15 @@
 		reg = <0x3c>;
 		status = "okay";
 	};
+	
+	mpu6050@68{
+		compatible = "wukong,mpu6050";
+		reg = <0x68>;
+		interrupt-parent = <&pio>;
+		interrupts = <0 7 IRQ_TYPE_EDGE_RISING>;
+
+		status = "okay";
+	};
 };
 &emac {
 	phy-handle = <&int_mii_phy>;

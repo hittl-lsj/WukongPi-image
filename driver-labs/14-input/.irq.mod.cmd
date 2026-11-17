@@ -1,1 +1,0 @@
-savedcmd_/home/hitle/桌面/H3/driver-labs/14-input/irq.mod := printf '%s\n'   irq.o | awk '!x[$$0]++ { print("/home/hitle/桌面/H3/driver-labs/14-input/"$$0) }' > /home/hitle/桌面/H3/driver-labs/14-input/irq.mod
